@@ -3,6 +3,7 @@
 import { createClient } from "../../../supabase/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { fixClientRecord } from "./client-actions";
 
 export async function clientRegisterAction(formData: FormData) {
   const supabase = await createClient();
@@ -14,6 +15,10 @@ export async function clientRegisterAction(formData: FormData) {
   const password = formData.get("password") as string;
   const confirm_password = formData.get("confirm_password") as string;
   const accountant_id = formData.get("accountant_id") as string;
+
+  console.log("Client registration starting with data:", {
+    token, email, name, accountant_id
+  });
 
   if (password !== confirm_password) {
     // In a real app, you would handle this error better
@@ -44,21 +49,47 @@ export async function clientRegisterAction(formData: FormData) {
   }
 
   // Mark the invitation as used
-  await supabase
+  const { error: inviteUpdateError } = await supabase
     .from("client_invitations")
     .update({ used: true })
     .eq("token", token);
 
+  if (inviteUpdateError) {
+    console.error("Error marking invitation as used:", inviteUpdateError);
+  } else {
+    console.log("Invitation marked as used successfully");
+  }
+
   // Update the client record with the user ID
   if (userData.user) {
-    await supabase
-      .from("clients")
-      .update({
-        client_user_id: userData.user.id,
-        status: "active",
-      })
-      .eq("email", email)
-      .eq("user_id", accountant_id);
+    console.log("User created successfully:", userData.user.id);
+
+    // First, ensure the user exists in the public users table
+    console.log("Creating user record in public users table");
+    const { error: userInsertError } = await supabase.from("users").insert({
+      id: userData.user.id,
+      full_name: full_name,
+      email: email,
+      user_id: userData.user.id,
+      created_at: new Date().toISOString(),
+    });
+
+    if (userInsertError) {
+      console.error("Error creating user record:", userInsertError);
+      // Continue anyway as the user might already exist
+    } else {
+      console.log("User record created successfully in public users table");
+    }
+
+    // Try to create or update the client record
+    const result = await fixClientRecord(
+      userData.user.id,
+      accountant_id,
+      name || full_name,
+      email
+    );
+
+    console.log("Client record fix attempt result:", result);
   }
 
   return redirect("/client/dashboard");

@@ -2,28 +2,46 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Copy, Check } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 export function RegistrationLink({ notes }: { notes: string | null }) {
   const [copied, setCopied] = useState(false);
+  const [fullUrl, setFullUrl] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Extract registration link from notes
   const extractRegistrationLink = () => {
     if (!notes) return null;
 
-    const match = notes.match(
+    // Check for full URL format first (new format)
+    const fullUrlMatch = notes.match(
+      /Registration link: (https?:\/\/[^\s]+)/
+    );
+    if (fullUrlMatch) return fullUrlMatch[1];
+
+    // Fallback to relative path format (old format)
+    const relativeMatch = notes.match(
       /Registration link: (\/client\/register\?token=[a-zA-Z0-9]+)/,
     );
-    return match ? match[1] : null;
+    return relativeMatch ? relativeMatch[1] : null;
   };
 
   const registrationLink = extractRegistrationLink();
-  const fullUrl = registrationLink
-    ? `${window.location.origin}${registrationLink}`
-    : null;
+
+  // Set the full URL after component mounts to avoid window is not defined error
+  useEffect(() => {
+    if (registrationLink) {
+      // If the registration link is already a full URL
+      if (registrationLink.startsWith('http')) {
+        setFullUrl(registrationLink);
+      } else {
+        // Otherwise append the origin
+        setFullUrl(`${window.location.origin}${registrationLink}`);
+      }
+    }
+  }, [registrationLink]);
 
   const handleCopy = () => {
     if (fullUrl) {
@@ -38,6 +56,7 @@ export function RegistrationLink({ notes }: { notes: string | null }) {
     }
   };
 
+  // Early return if no registration link is found
   if (!registrationLink) return null;
 
   return (
@@ -46,7 +65,7 @@ export function RegistrationLink({ notes }: { notes: string | null }) {
         Client Registration Link
       </h3>
       <div className="flex gap-2">
-        <Input value={fullUrl} readOnly className="flex-1 bg-white" />
+        <Input value={fullUrl || ''} readOnly className="flex-1 bg-white" />
         <Button onClick={handleCopy} variant="outline" size="icon">
           {copied ? (
             <Check className="h-4 w-4" />

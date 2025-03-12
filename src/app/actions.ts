@@ -6,6 +6,7 @@ import { encodedRedirect } from "@/utils/utils";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Polar } from "@polar-sh/sdk";
+import { fixClientRecord } from "./client/client-actions";
 
 export const signUpAction = async (formData: FormData) => {
   const email = formData.get("email")?.toString();
@@ -74,13 +75,52 @@ export const signInAction = async (formData: FormData) => {
   const password = formData.get("password") as string;
   const supabase = await createClient();
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
   if (error) {
     return encodedRedirect("error", "/sign-in", error.message);
+  }
+
+  // Check if the user is a client or an accountant
+  if (data?.user?.user_metadata?.is_client) {
+    // If they're a client, check if their client record exists
+    const { data: clientData, error: clientError } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("client_user_id", data.user.id)
+      .maybeSingle();
+
+    if (clientError || !clientData) {
+      console.log("Client record not found for user, attempting auto-repair");
+
+      // Try to fix the client record automatically
+      try {
+        const accountantId = data.user.user_metadata.accountant_id;
+        // Pre-compute the name on the server
+        let name = data.user.user_metadata.full_name;
+        if (!name && email) {
+          name = email.split('@')[0];
+        }
+
+        if (accountantId) {
+          await fixClientRecord(
+            data.user.id,
+            accountantId,
+            name,
+            email
+          );
+        } else {
+          console.log("Cannot auto-repair: missing accountant_id in user metadata");
+        }
+      } catch (e) {
+        console.error("Error auto-repairing client record:", e);
+      }
+    }
+
+    return redirect("/client/dashboard");
   }
 
   return redirect("/dashboard");

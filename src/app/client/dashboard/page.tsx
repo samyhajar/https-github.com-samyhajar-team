@@ -12,10 +12,13 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
+  UserCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "../../../../supabase/server";
 import Link from "next/link";
+import { fixClientRecordAction } from "../client-actions";
 
 export default async function ClientDashboardPage() {
   const supabase = await createClient();
@@ -37,7 +40,55 @@ export default async function ClientDashboardPage() {
 
   if (clientError || !clientData) {
     console.error("Error fetching client data:", clientError);
-    return redirect("/sign-in");
+
+    // Instead of redirecting, show a message that the account setup is incomplete
+    return (
+      <div className="w-full">
+        <div className="container mx-auto px-4 py-8 flex flex-col gap-8">
+          <h1 className="text-3xl font-bold">Client Dashboard</h1>
+
+          <Card className="bg-amber-50 border-amber-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                Account Setup Incomplete
+              </CardTitle>
+              <CardDescription>
+                Your client account setup is not complete
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="mb-4">
+                Your accountant needs to complete your account setup. The client record associated with your user account was not found.
+              </p>
+              <p className="mb-6 text-sm text-muted-foreground">
+                Please contact your accountant and ask them to check your account setup. You might need to be re-invited or have your client record properly configured.
+              </p>
+              <p className="text-sm">
+                User ID: {user.id}<br />
+                Email: {user.email}<br />
+                Name: {user.user_metadata?.full_name || 'Not set'}<br />
+                Accountant ID: {user.user_metadata?.accountant_id || 'Not set'}
+              </p>
+              <div className="mt-4 flex flex-col sm:flex-row gap-3">
+                <form action={fixClientRecordAction}>
+                  <input type="hidden" name="client_user_id" value={user.id} />
+                  <input type="hidden" name="accountant_id" value={user.user_metadata?.accountant_id || ''} />
+                  <input type="hidden" name="name" value={user.user_metadata?.full_name || (user.email ? user.email.split('@')[0] : 'Client')} />
+                  <input type="hidden" name="email" value={user.email || ''} />
+                  <Button type="submit" className="w-full sm:w-auto">
+                    Try to Fix Setup
+                  </Button>
+                </form>
+                <Button asChild variant="outline" className="w-full sm:w-auto">
+                  <Link href="/sign-in">Return to Sign In</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   // Get accountant information
@@ -58,7 +109,7 @@ export default async function ClientDashboardPage() {
   const approvedDocuments = documents?.filter(d => d.status === "approved").length || 0;
 
   return (
-    <main className="w-full">
+    <div className="w-full">
       <div className="container mx-auto px-4 py-8 flex flex-col gap-8">
         <h1 className="text-3xl font-bold">Client Dashboard</h1>
 
@@ -106,7 +157,7 @@ export default async function ClientDashboardPage() {
               <p className="text-muted-foreground text-sm mt-1">
                 Documents uploaded
               </p>
-            </div>
+            </CardContent>
           </Card>
 
           <Card>
@@ -188,6 +239,6 @@ export default async function ClientDashboardPage() {
           </CardContent>
         </Card>
       </div>
-    </main>
+    </div>
   );
 }

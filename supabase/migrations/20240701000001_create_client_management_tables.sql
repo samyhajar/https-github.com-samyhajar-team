@@ -55,6 +55,33 @@ CREATE TABLE IF NOT EXISTS client_notes (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Add DROP Policy statements before creating policies for clients table
+DROP POLICY IF EXISTS "Users can view their own clients" ON clients;
+DROP POLICY IF EXISTS "Users can insert their own clients" ON clients;
+DROP POLICY IF EXISTS "Users can update their own clients" ON clients;
+DROP POLICY IF EXISTS "Users can delete their own clients" ON clients;
+
+-- Add DROP Policy statements before creating policies for documents table
+DROP POLICY IF EXISTS "Users can view their own documents" ON documents;
+DROP POLICY IF EXISTS "Users can insert their own documents" ON documents;
+DROP POLICY IF EXISTS "Users can update their own documents" ON documents;
+DROP POLICY IF EXISTS "Users can delete their own documents" ON documents;
+
+-- Add DROP Policy statements before creating policies for reminders table
+DROP POLICY IF EXISTS "Users can view their own reminders" ON reminders;
+DROP POLICY IF EXISTS "Users can insert their own reminders" ON reminders;
+DROP POLICY IF EXISTS "Users can update their own reminders" ON reminders;
+DROP POLICY IF EXISTS "Users can delete their own reminders" ON reminders;
+
+-- Add DROP Policy statements before creating policies for client_notes table
+DROP POLICY IF EXISTS "Users can view their own client notes" ON client_notes;
+DROP POLICY IF EXISTS "Users can insert their own client notes" ON client_notes;
+DROP POLICY IF EXISTS "Users can update their own client notes" ON client_notes;
+DROP POLICY IF EXISTS "Users can delete their own client notes" ON client_notes;
+
+-- Comment explaining that this is a fix for the original migration
+COMMENT ON TABLE clients IS 'Clients table with fixed RLS policies';
+
 -- Add RLS policies for clients table
 ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
 
