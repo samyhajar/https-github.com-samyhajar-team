@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -6,80 +8,41 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { createClient } from "../../../../supabase/server";
-import { redirect } from "next/navigation";
-import {
-  Bell,
-  Search,
-  Filter,
-  Calendar,
-  Mail,
-  MessageSquare,
-  Smartphone,
-  Plus,
-} from "lucide-react";
+import { Bell, Search, Filter, Calendar, Plus, Mail } from "lucide-react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
-import { format, isAfter, isBefore, addDays } from "date-fns";
-import { SendAllRemindersButton } from "@/components/reminders/send-all-reminders-button";
-import { ClientReminderButtonServer } from "@/components/reminders/client-reminder-button-server";
 
-export default async function RemindersPage() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return redirect("/sign-in");
-  }
-
-  // Get all reminders for the user
-  const { data: reminders, error } = await supabase
-    .from("reminders")
-    .select("*, clients(name, email)")
-    .eq("user_id", user.id)
-    .order("reminder_date", { ascending: true });
-
-  if (error) {
-    console.error("Error fetching reminders:", error);
-  }
-
-  // Group reminders by status and date
+export default function RemindersView({
+  overdueReminders = [],
+  todayReminders = [],
+  tomorrowReminders = [],
+  thisWeekReminders = [],
+  allReminders = [],
+}) {
   const today = new Date();
-  const tomorrow = addDays(today, 1);
-  const nextWeek = addDays(today, 7);
 
-  const overdueReminders =
-    reminders?.filter(
-      (reminder) =>
-        isBefore(new Date(reminder.reminder_date), today) &&
-        reminder.status === "pending",
-    ) || [];
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
 
-  const todayReminders =
-    reminders?.filter(
-      (reminder) =>
-        format(new Date(reminder.reminder_date), "yyyy-MM-dd") ===
-        format(today, "yyyy-MM-dd"),
-    ) || [];
+  const isOverdue = (dateString) => {
+    return new Date(dateString) < today;
+  };
 
-  const tomorrowReminders =
-    reminders?.filter(
-      (reminder) =>
-        format(new Date(reminder.reminder_date), "yyyy-MM-dd") ===
-        format(tomorrow, "yyyy-MM-dd"),
-    ) || [];
-
-  const thisWeekReminders =
-    reminders?.filter(
-      (reminder) =>
-        isAfter(new Date(reminder.reminder_date), today) &&
-        isBefore(new Date(reminder.reminder_date), nextWeek) &&
-        format(new Date(reminder.reminder_date), "yyyy-MM-dd") !==
-          format(tomorrow, "yyyy-MM-dd"),
-    ) || [];
+  const reminders =
+    allReminders.length > 0
+      ? allReminders
+      : [
+          ...overdueReminders,
+          ...todayReminders,
+          ...tomorrowReminders,
+          ...thisWeekReminders,
+        ];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -87,7 +50,10 @@ export default async function RemindersPage() {
         <h1 className="text-3xl font-bold">Reminders</h1>
         <div className="flex gap-2">
           {reminders && reminders.length > 0 && (
-            <SendAllRemindersButton reminders={reminders} />
+            <Button className="flex items-center gap-2">
+              <Mail size={18} />
+              <span>Send All Pending</span>
+            </Button>
           )}
           <Link href="/dashboard/settings/reminder-settings">
             <Button className="flex items-center gap-2">
@@ -193,15 +159,14 @@ export default async function RemindersPage() {
                 </thead>
                 <tbody>
                   {reminders.map((reminder) => {
-                    const reminderDate = new Date(reminder.reminder_date);
-                    const isOverdue =
-                      isBefore(reminderDate, today) &&
+                    const isOverdueReminder =
+                      isOverdue(reminder.reminder_date) &&
                       reminder.status === "pending";
 
                     return (
                       <tr
                         key={reminder.id}
-                        className={`border-b hover:bg-gray-50 ${isOverdue ? "bg-red-50" : ""}`}
+                        className={`border-b hover:bg-gray-50 ${isOverdueReminder ? "bg-red-50" : ""}`}
                       >
                         <td className="py-3 px-4 font-medium">
                           {reminder.title}
@@ -217,10 +182,12 @@ export default async function RemindersPage() {
                         <td className="py-3 px-4">
                           <span
                             className={
-                              isOverdue ? "text-red-600 font-medium" : ""
+                              isOverdueReminder
+                                ? "text-red-600 font-medium"
+                                : ""
                             }
                           >
-                            {format(reminderDate, "MMM d, yyyy")}
+                            {formatDate(reminder.reminder_date)}
                           </span>
                         </td>
                         <td className="py-3 px-4">
@@ -246,12 +213,12 @@ export default async function RemindersPage() {
                                 ? "bg-green-100 text-green-800"
                                 : reminder.status === "failed"
                                   ? "bg-red-100 text-red-800"
-                                  : isOverdue
+                                  : isOverdueReminder
                                     ? "bg-red-100 text-red-800"
                                     : "bg-yellow-100 text-yellow-800"
                             }`}
                           >
-                            {isOverdue && reminder.status === "pending"
+                            {isOverdueReminder && reminder.status === "pending"
                               ? "Overdue"
                               : reminder.status.charAt(0).toUpperCase() +
                                 reminder.status.slice(1)}
@@ -263,20 +230,23 @@ export default async function RemindersPage() {
                           </p>
                         </td>
                         <td className="py-3 px-4">
-                          {reminder.reminder_type === "email" && (
-                            <div data-reminder-id={reminder.id}>
-                              <ClientReminderButtonServer
-                                reminderId={reminder.id}
-                                clientName={reminder.clients?.name || "Client"}
-                                clientEmail={reminder.clients?.email}
-                                reminderTitle={reminder.title}
-                                reminderMessage={reminder.message}
-                                reminderDate={reminder.reminder_date}
-                                reminderType={reminder.reminder_type}
-                                status={reminder.status}
-                              />
-                            </div>
-                          )}
+                          {reminder.reminder_type === "email" &&
+                            reminder.status !== "sent" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex items-center gap-1"
+                                disabled={!reminder.clients?.email}
+                                title={
+                                  !reminder.clients?.email
+                                    ? "Client email is missing"
+                                    : ""
+                                }
+                              >
+                                <Mail className="h-4 w-4" />
+                                Send
+                              </Button>
+                            )}
                         </td>
                       </tr>
                     );

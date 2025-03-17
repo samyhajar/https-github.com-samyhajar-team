@@ -30,6 +30,8 @@ import { AddClientNote } from "@/components/client/add-client-note";
 import { AddReminder } from "@/components/client/add-reminder";
 import { UploadDocument } from "@/components/client/upload-document";
 import { RegistrationLink } from "@/components/client/registration-link";
+import { TestEmailButton } from "@/components/client/test-email-button";
+import { EmailLogsViewer } from "@/components/client/email-logs-viewer";
 
 export default async function ClientDetailPage({
   params,
@@ -96,6 +98,11 @@ export default async function ClientDetailPage({
           <p className="text-gray-500">{client.company_name || "No company"}</p>
         </div>
         <div className="flex gap-2">
+          <TestEmailButton
+            clientEmail={client.email}
+            clientName={client.name}
+            accountantName={user.user_metadata?.full_name || "Your Accountant"}
+          />
           <Button variant="outline" asChild>
             <Link href={`/dashboard/clients/${params.id}/edit`}>
               <Edit className="h-4 w-4 mr-1" /> Edit
@@ -461,6 +468,10 @@ export default async function ClientDetailPage({
           </Card>
         </TabsContent>
       </Tabs>
+
+      <div className="mt-8">
+        <EmailLogsViewer />
+      </div>
     </div>
   );
 }

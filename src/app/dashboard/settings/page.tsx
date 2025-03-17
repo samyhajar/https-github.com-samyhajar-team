@@ -53,6 +53,9 @@ export default async function SettingsPage() {
           <TabsTrigger value="billing" className="flex items-center gap-2">
             <CreditCard className="h-4 w-4" /> Billing
           </TabsTrigger>
+          <TabsTrigger value="reminders" className="flex items-center gap-2">
+            <Bell className="h-4 w-4" /> Reminders
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile">
@@ -202,6 +205,36 @@ export default async function SettingsPage() {
                   </div>
                   <Switch id="two_factor" />
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="reminders">
+          <Card>
+            <CardHeader>
+              <CardTitle>Client Reminder Settings</CardTitle>
+              <CardDescription>
+                Configure when clients should receive reminders based on their
+                invoicing frequency
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="font-medium">Reminder Configuration</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Set up automatic reminders for different client types
+                  </p>
+                </div>
+                <Button
+                  onClick={() =>
+                    (window.location.href =
+                      "/dashboard/settings/reminder-settings")
+                  }
+                >
+                  Manage Reminders
+                </Button>
               </div>
             </CardContent>
           </Card>

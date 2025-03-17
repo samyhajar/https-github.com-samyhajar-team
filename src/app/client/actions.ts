@@ -17,7 +17,10 @@ export async function clientRegisterAction(formData: FormData) {
   const accountant_id = formData.get("accountant_id") as string;
 
   console.log("Client registration starting with data:", {
-    token, email, name, accountant_id
+    token,
+    email,
+    name,
+    accountant_id,
   });
 
   if (password !== confirm_password) {
@@ -86,7 +89,7 @@ export async function clientRegisterAction(formData: FormData) {
       userData.user.id,
       accountant_id,
       name || full_name,
-      email
+      email,
     );
 
     console.log("Client record fix attempt result:", result);
@@ -173,6 +176,7 @@ export async function uploadDocumentAction(formData: FormData) {
     reference,
     status: "pending_review",
     uploaded_by: user.id,
+    created_at: new Date().toISOString(),
   });
 
   if (error) {
@@ -181,6 +185,138 @@ export async function uploadDocumentAction(formData: FormData) {
   }
 
   revalidatePath("/client/dashboard/documents");
+  return { success: true };
+}
+
+export async function markDocumentTypeCompletedAction({
+  clientId,
+  documentType,
+  year,
+  month,
+}: {
+  clientId: string;
+  documentType: string;
+  year: string;
+  month: string;
+}) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("Not authenticated");
+  }
+
+  // Get client information to verify ownership
+  const { data: clientData, error: clientError } = await supabase
+    .from("clients")
+    .select("id, user_id, name, email")
+    .eq("id", clientId)
+    .eq("client_user_id", user.id)
+    .single();
+
+  if (clientError || !clientData) {
+    throw new Error("Client not found or access denied");
+  }
+
+  // Check if already marked as completed
+  const { data: existingStatus, error: statusCheckError } = await supabase
+    .from("document_completion_status")
+    .select("*")
+    .eq("client_id", clientId)
+    .eq("document_type", documentType)
+    .eq("year", year)
+    .eq("month", month)
+    .maybeSingle();
+
+  if (statusCheckError) {
+    console.error("Error checking completion status:", statusCheckError);
+    throw new Error("Error checking document status");
+  }
+
+  // Update or insert completion status
+  const completionDate = new Date().toISOString();
+
+  if (existingStatus) {
+    const { error: updateError } = await supabase
+      .from("document_completion_status")
+      .update({
+        is_completed: true,
+        completed_at: completionDate,
+        updated_at: completionDate,
+      })
+      .eq("id", existingStatus.id);
+
+    if (updateError) {
+      console.error("Error updating completion status:", updateError);
+      throw new Error("Failed to mark as completed");
+    }
+  } else {
+    const { error: insertError } = await supabase
+      .from("document_completion_status")
+      .insert({
+        client_id: clientId,
+        document_type: documentType,
+        year: year,
+        month: month,
+        is_completed: true,
+        completed_at: completionDate,
+        created_at: completionDate,
+        updated_at: completionDate,
+      });
+
+    if (insertError) {
+      console.error("Error inserting completion status:", insertError);
+      throw new Error("Failed to mark as completed");
+    }
+  }
+
+  // Get accountant information
+  const { data: accountantData, error: accountantError } = await supabase
+    .from("users")
+    .select("email, full_name")
+    .eq("id", clientData.user_id)
+    .single();
+
+  if (!accountantError && accountantData && accountantData.email) {
+    // Send notification email to accountant
+    try {
+      // Import the email utility
+      const { sendEmail, generateDocumentCompletionEmailBody } = await import(
+        "@/lib/email"
+      );
+
+      // Generate email body
+      const emailBody = generateDocumentCompletionEmailBody({
+        clientName: clientData.name,
+        documentType,
+        month,
+        year,
+        accountantName: accountantData.full_name || "Accountant",
+      });
+
+      // Send the email
+      await sendEmail({
+        to: accountantData.email,
+        subject: `Client ${clientData.name} has completed ${documentType} uploads`,
+        body: emailBody,
+        type: "document_completion",
+      });
+
+      console.log(
+        `Notification email sent to ${accountantData.email} about client ${clientData.name} completing ${documentType} for ${month}/${year}`,
+      );
+    } catch (emailError) {
+      console.error("Error sending notification email:", emailError);
+      // We don't throw here as the main action succeeded
+    }
+  }
+
+  revalidatePath(`/client/dashboard/upload`);
+  revalidatePath(`/client/dashboard/documents`);
+
   return { success: true };
 }
 

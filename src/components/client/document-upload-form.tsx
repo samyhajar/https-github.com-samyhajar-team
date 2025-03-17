@@ -12,9 +12,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useState } from "react";
-import { uploadDocumentAction } from "@/app/client/actions";
+import {
+  markDocumentTypeCompletedAction,
+  uploadDocumentAction,
+} from "@/app/client/actions";
 import { useToast } from "@/components/ui/use-toast";
-import { Upload, FileText } from "lucide-react";
+import { Upload, FileText, CheckCircle } from "lucide-react";
 
 interface DocumentUploadFormProps {
   documentType: string;
@@ -22,6 +25,7 @@ interface DocumentUploadFormProps {
   defaultYear: string;
   defaultMonth: string;
   exportFormat: "csv" | "xml";
+  isCompleted?: boolean;
 }
 
 export function DocumentUploadForm({
@@ -30,9 +34,11 @@ export function DocumentUploadForm({
   defaultYear,
   defaultMonth,
   exportFormat,
+  isCompleted = false,
 }: DocumentUploadFormProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isMarkingCompleted, setIsMarkingCompleted] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const { toast } = useToast();
@@ -82,6 +88,8 @@ export function DocumentUploadForm({
 
     const formData = new FormData(e.currentTarget);
     formData.append("document_type", documentType);
+    formData.append("year", formData.get("year") as string);
+    formData.append("month", formData.get("month") as string);
 
     try {
       const result = await uploadDocumentAction(formData);
@@ -113,103 +121,158 @@ export function DocumentUploadForm({
     }
   };
 
+  const handleMarkAsCompleted = async () => {
+    setIsMarkingCompleted(true);
+    try {
+      await markDocumentTypeCompletedAction({
+        clientId,
+        documentType,
+        year: defaultYear,
+        month: defaultMonth,
+      });
+
+      toast({
+        title: "Success",
+        description: `${documentType} marked as completed. Your accountant has been notified.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to mark as completed",
+        variant: "destructive",
+      });
+    } finally {
+      setIsMarkingCompleted(false);
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="year">Year</Label>
-              <Select name="year" defaultValue={defaultYear}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select year" />
-                </SelectTrigger>
-                <SelectContent>
-                  {years.map((year) => (
-                    <SelectItem key={year} value={year}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        {isCompleted ? (
+          <div className="flex flex-col items-center justify-center p-8 border rounded-md bg-muted/50 h-full">
+            <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
+            <h3 className="text-xl font-medium">Marked as Completed</h3>
+            <p className="text-center mt-2 text-muted-foreground">
+              This document type has been marked as completed and is no longer
+              accepting uploads.
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="year">Year</Label>
+                <Select name="year" defaultValue={defaultYear}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {years.map((year) => (
+                      <SelectItem key={year} value={year}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="month">Month</Label>
+                <Select name="month" defaultValue={defaultMonth}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select month" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {months.map((month) => (
+                      <SelectItem key={month.value} value={month.value}>
+                        {month.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div>
-              <Label htmlFor="month">Month</Label>
-              <Select name="month" defaultValue={defaultMonth}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select month" />
-                </SelectTrigger>
-                <SelectContent>
-                  {months.map((month) => (
-                    <SelectItem key={month.value} value={month.value}>
-                      {month.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="file">Document File</Label>
-            <Input
-              id="file"
-              name="file"
-              type="file"
-              onChange={handleFileChange}
-              required
-            />
-            {selectedFile && (
-              <p className="text-sm text-gray-500 mt-1">
-                Selected: {selectedFile.name} (
-                {(selectedFile.size / 1024).toFixed(2)} KB)
-              </p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Input
-              id="description"
-              name="description"
-              placeholder="Brief description of the document"
-              required
-            />
-          </div>
-
-          {(documentType === "einzahlungen" || documentType === "ausgaben") && (
-            <div>
-              <Label htmlFor="amount">Amount</Label>
+              <Label htmlFor="file">Document File</Label>
               <Input
-                id="amount"
-                name="amount"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
+                id="file"
+                name="file"
+                type="file"
+                onChange={handleFileChange}
+                required
+              />
+              {selectedFile && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Selected: {selectedFile.name} (
+                  {(selectedFile.size / 1024).toFixed(2)} KB)
+                </p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <Input
+                id="description"
+                name="description"
+                placeholder="Brief description of the document"
                 required
               />
             </div>
-          )}
 
-          <div>
-            <Label htmlFor="date">Document Date</Label>
-            <Input id="date" name="date" type="date" required />
-          </div>
+            {(documentType === "einzahlungen" ||
+              documentType === "ausgaben") && (
+              <div>
+                <Label htmlFor="amount">Amount</Label>
+                <Input
+                  id="amount"
+                  name="amount"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+            )}
 
-          <div>
-            <Label htmlFor="reference">Reference Number (Optional)</Label>
-            <Input
-              id="reference"
-              name="reference"
-              placeholder="Invoice or reference number"
-            />
-          </div>
+            <div>
+              <Label htmlFor="date">Document Date</Label>
+              <Input id="date" name="date" type="date" required />
+            </div>
 
-          <Button type="submit" disabled={isUploading} className="w-full">
-            {isUploading ? "Uploading..." : "Upload Document"}
-          </Button>
-        </form>
+            <div>
+              <Label htmlFor="reference">Reference Number (Optional)</Label>
+              <Input
+                id="reference"
+                name="reference"
+                placeholder="Invoice or reference number"
+              />
+            </div>
+
+            <Button type="submit" disabled={isUploading} className="w-full">
+              {isUploading ? "Uploading..." : "Upload Document"}
+            </Button>
+
+            <div className="mt-6 pt-6 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleMarkAsCompleted}
+                disabled={isMarkingCompleted}
+                className="w-full flex items-center justify-center gap-2"
+              >
+                <CheckCircle className="h-4 w-4" />
+                {isMarkingCompleted ? "Processing..." : "Mark as Completed"}
+              </Button>
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                Click this button when you have uploaded all documents for this
+                category. This will notify your accountant and prevent further
+                uploads.
+              </p>
+            </div>
+          </form>
+        )}
       </div>
 
       <div className="border rounded-md p-4">

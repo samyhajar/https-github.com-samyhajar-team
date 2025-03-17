@@ -9,6 +9,47 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      accountant_reminder_settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_enabled: boolean
+          monthly_days_before: number
+          quarterly_days_before: number
+          updated_at: string | null
+          user_id: string
+          yearly_days_before: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean
+          monthly_days_before?: number
+          quarterly_days_before?: number
+          updated_at?: string | null
+          user_id: string
+          yearly_days_before?: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean
+          monthly_days_before?: number
+          quarterly_days_before?: number
+          updated_at?: string | null
+          user_id?: string
+          yearly_days_before?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accountant_reminder_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_invitations: {
         Row: {
           accountant_id: string
@@ -146,6 +187,50 @@ export type Database = {
           },
         ]
       }
+      document_completion_status: {
+        Row: {
+          client_id: string
+          completed_at: string | null
+          created_at: string
+          document_type: string
+          id: string
+          is_completed: boolean
+          month: string
+          updated_at: string
+          year: string
+        }
+        Insert: {
+          client_id: string
+          completed_at?: string | null
+          created_at?: string
+          document_type: string
+          id?: string
+          is_completed?: boolean
+          month: string
+          updated_at?: string
+          year: string
+        }
+        Update: {
+          client_id?: string
+          completed_at?: string | null
+          created_at?: string
+          document_type?: string
+          id?: string
+          is_completed?: boolean
+          month?: string
+          updated_at?: string
+          year?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_completion_status_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           amount: number | null
@@ -229,6 +314,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      email_logs: {
+        Row: {
+          body: string
+          created_at: string | null
+          error_message: string | null
+          from_email: string
+          id: string
+          sent_at: string | null
+          status: string
+          subject: string
+          test_mode: boolean | null
+          to_email: string
+          type: string
+        }
+        Insert: {
+          body: string
+          created_at?: string | null
+          error_message?: string | null
+          from_email: string
+          id?: string
+          sent_at?: string | null
+          status: string
+          subject: string
+          test_mode?: boolean | null
+          to_email: string
+          type: string
+        }
+        Update: {
+          body?: string
+          created_at?: string | null
+          error_message?: string | null
+          from_email?: string
+          id?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          test_mode?: boolean | null
+          to_email?: string
+          type?: string
+        }
+        Relationships: []
       }
       reminders: {
         Row: {
@@ -447,7 +574,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      daily_invoice_reminder_check: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      generate_invoice_reminders: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

@@ -8,10 +8,12 @@ import {
 } from "@/components/ui/card";
 import { createClient } from "../../../../supabase/server";
 import { redirect } from "next/navigation";
-import { FileText, Search, Filter, Download } from "lucide-react";
+import { FileText, Search, Filter, Download, FolderTree } from "lucide-react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
+import { FolderBrowser } from "@/components/documents/folder-browser";
+import { organizeDocumentsIntoTree } from "@/lib/document-utils";
 
 export default async function DocumentsPage() {
   const supabase = await createClient();
@@ -46,6 +48,9 @@ export default async function DocumentsPage() {
     documents?.filter((doc) => doc.document_type === "report") || [];
   const others =
     documents?.filter((doc) => doc.document_type === "other") || [];
+
+  // Organize documents into a tree structure
+  const documentTree = organizeDocumentsIntoTree(documents || []);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -130,6 +135,34 @@ export default async function DocumentsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Document Browser */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FolderTree className="h-5 w-5" />
+            Document Browser
+          </CardTitle>
+          <CardDescription>
+            Browse and download documents by client, year, month, and type
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {documentTree.length > 0 ? (
+            <FolderBrowser data={documentTree} className="border-0" />
+          ) : (
+            <div className="text-center py-12">
+              <FolderTree className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-lg font-medium text-gray-900">
+                No documents yet
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Upload documents from client profiles.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Document List */}
       <Card>

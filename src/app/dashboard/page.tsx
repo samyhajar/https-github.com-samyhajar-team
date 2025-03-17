@@ -57,15 +57,6 @@ export default async function Dashboard() {
     .eq("user_id", user.id)
     .eq("invoicing_frequency", "yearly");
 
-  // Get upcoming reminders
-  const { data: upcomingReminders } = await supabase
-    .from("reminders")
-    .select("*")
-    .eq("user_id", user.id)
-    .eq("status", "pending")
-    .order("reminder_date", { ascending: true })
-    .limit(5);
-
   // Get recent documents
   const { data: recentDocuments } = await supabase
     .from("documents")
@@ -109,6 +100,13 @@ export default async function Dashboard() {
               >
                 <FileText size={18} />
                 <span>View Documents</span>
+              </Link>
+              <Link
+                href="/dashboard/settings/reminder-settings"
+                className="bg-white/20 hover:bg-white/30 transition-colors px-4 py-2 rounded-lg flex items-center gap-2"
+              >
+                <Bell size={18} />
+                <span>Configure Reminders</span>
               </Link>
             </div>
           </CardContent>
@@ -168,53 +166,8 @@ export default async function Dashboard() {
           </Card>
         </div>
 
-        {/* Upcoming Reminders & Recent Documents */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Bell size={18} className="text-amber-500" />
-                  <span>Upcoming Reminders</span>
-                </div>
-                <Link
-                  href="/dashboard/reminders"
-                  className="text-sm text-blue-500 flex items-center gap-1"
-                >
-                  View All <ArrowUpRight size={14} />
-                </Link>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {upcomingReminders && upcomingReminders.length > 0 ? (
-                <div className="space-y-4">
-                  {upcomingReminders.map((reminder) => (
-                    <div
-                      key={reminder.id}
-                      className="flex items-start gap-3 pb-3 border-b border-gray-100"
-                    >
-                      <div className="bg-amber-100 p-2 rounded-full">
-                        <Clock size={16} className="text-amber-600" />
-                      </div>
-                      <div>
-                        <h4 className="font-medium">{reminder.title}</h4>
-                        <p className="text-sm text-gray-500 mt-1">
-                          {new Date(
-                            reminder.reminder_date,
-                          ).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-6 text-gray-500">
-                  <p>No upcoming reminders</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
+        {/* Recent Documents */}
+        <div className="grid grid-cols-1 gap-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">

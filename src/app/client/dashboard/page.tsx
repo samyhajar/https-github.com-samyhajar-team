@@ -59,23 +59,40 @@ export default async function ClientDashboardPage() {
             </CardHeader>
             <CardContent>
               <p className="mb-4">
-                Your accountant needs to complete your account setup. The client record associated with your user account was not found.
+                Your accountant needs to complete your account setup. The client
+                record associated with your user account was not found.
               </p>
               <p className="mb-6 text-sm text-muted-foreground">
-                Please contact your accountant and ask them to check your account setup. You might need to be re-invited or have your client record properly configured.
+                Please contact your accountant and ask them to check your
+                account setup. You might need to be re-invited or have your
+                client record properly configured.
               </p>
               <p className="text-sm">
-                User ID: {user.id}<br />
-                Email: {user.email}<br />
-                Name: {user.user_metadata?.full_name || 'Not set'}<br />
-                Accountant ID: {user.user_metadata?.accountant_id || 'Not set'}
+                User ID: {user.id}
+                <br />
+                Email: {user.email}
+                <br />
+                Name: {user.user_metadata?.full_name || "Not set"}
+                <br />
+                Accountant ID: {user.user_metadata?.accountant_id || "Not set"}
               </p>
               <div className="mt-4 flex flex-col sm:flex-row gap-3">
                 <form action={fixClientRecordAction}>
                   <input type="hidden" name="client_user_id" value={user.id} />
-                  <input type="hidden" name="accountant_id" value={user.user_metadata?.accountant_id || ''} />
-                  <input type="hidden" name="name" value={user.user_metadata?.full_name || (user.email ? user.email.split('@')[0] : 'Client')} />
-                  <input type="hidden" name="email" value={user.email || ''} />
+                  <input
+                    type="hidden"
+                    name="accountant_id"
+                    value={user.user_metadata?.accountant_id || ""}
+                  />
+                  <input
+                    type="hidden"
+                    name="name"
+                    value={
+                      user.user_metadata?.full_name ||
+                      (user.email ? user.email.split("@")[0] : "Client")
+                    }
+                  />
+                  <input type="hidden" name="email" value={user.email || ""} />
                   <Button type="submit" className="w-full sm:w-auto">
                     Try to Fix Setup
                   </Button>
@@ -105,8 +122,10 @@ export default async function ClientDashboardPage() {
     .eq("client_id", clientData.id);
 
   const totalDocuments = documents?.length || 0;
-  const pendingDocuments = documents?.filter(d => d.status === "pending_review").length || 0;
-  const approvedDocuments = documents?.filter(d => d.status === "approved").length || 0;
+  const pendingDocuments =
+    documents?.filter((d) => d.status === "pending_review").length || 0;
+  const approvedDocuments =
+    documents?.filter((d) => d.status === "approved").length || 0;
 
   return (
     <div className="w-full">
@@ -223,13 +242,20 @@ export default async function ClientDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Button asChild className="h-auto py-6 flex flex-col items-center justify-center">
+              <Button
+                asChild
+                className="h-auto py-6 flex flex-col items-center justify-center"
+              >
                 <Link href="/client/dashboard/upload">
                   <Upload className="h-8 w-8 mb-2" />
                   <span className="text-lg">Upload Documents</span>
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="h-auto py-6 flex flex-col items-center justify-center">
+              <Button
+                asChild
+                variant="outline"
+                className="h-auto py-6 flex flex-col items-center justify-center"
+              >
                 <Link href="/client/dashboard/documents">
                   <FileText className="h-8 w-8 mb-2" />
                   <span className="text-lg">View Documents</span>
